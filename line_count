@@ -1,0 +1,27 @@
+alias LineCount {
+  if (!%LineCount) { set %LineCount 0 }
+  if (!%LineTimer) { set %LineTimer $uptime }
+  inc %LineCount
+  echo -a %LineCount lines in $calc($uptime - %LineTimer) seconds
+
+  if ($calc($uptime - %LineTimer) < 20 ) && (%LineCount >= 15) {
+    echo -a Limit reached
+    unset %Line* 
+    set %LineLimit On
+    .timer 1 8 set %LineLimit Off
+  }
+
+  elseif ($calc($uptime - %LineTimer) > 20 ) && (%LineCount < 15) {
+    echo -a Limit not reached, resetting counter
+    set %LineCount 1 
+    set %LineTimer $uptime
+
+  }
+
+  elseif ($calc($uptime - %LineTimer) > 20 ) && (%LineCount >= 15) {
+    echo -a Limit not reached, resetting counter
+    set %LineCount 1 
+    set %LineTimer $uptime
+
+  }
+}
