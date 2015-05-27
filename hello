@@ -1,0 +1,20 @@
+ on $*:text:/(Hi|Hello|Hiya|Hiya guys|Hi guys|Hello all|Hi all|Hello guys)$/i:#: {
+  if ((%flood) || ($($+(%,flood.,$nick),2))) { return } && ($nick == nick)
+
+  set -u10 %flood On
+  set -u900 %flood. $+ $nick On
+
+
+  { msg $chan Hello $nick grab a drink, kick back, and enjoy the stream! }
+
+}
+
+elseif ($nick != nick)
+
+ set -u10 %flood On
+  set -u900 %flood. $+ $nick On
+
+
+  { msg $chan I have already said hello to you, $nick }
+
+}
