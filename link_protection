@@ -1,0 +1,32 @@
+on $@*:text:*:#:{
+  if ($regex($1-,/.+\.(com|co|uk|net|org|gov|tv|edu|fm|ly|gl|rs|eu|gp|cc|tk|biz)/iS)) && ($nick !isop $chan) {
+    if (!$istok($($+(%,permit.,$chan),2),$nick,32)) {
+      msg # .timeout $nick 1
+      msg $chan Please, $Nick Ask a mod for permission to post links!
+    }
+  }
+  noop $regex($1-,/^!(reg del|reg add|permit)\s(\S+)/iS)  
+  if ($regml(1) == reg add) && ($nick isop $chan) {
+    if ($istok($($+(%,permit.,$chan),2),$regml(2),32)) {
+      msg $chan $regml(2) is already on the regular list
+    }
+    else {
+      set $+(%,permit.,$chan) $addtok($($+(%,permit.,$chan),2),$regml(2),32)
+      msg $chan $regml(2) You are now always permitted to post links
+    }
+  }
+  if ($regml(1) == permit) && ($nick isop $chan) {
+    set $+(%,permit.,$chan) $addtok($($+(%,permit.,$chan),2),$regml(2),32)
+    .timerunset 1 30 set $+(%,permit.,$chan) $remtok($($+(%,permit.,$chan),2),$regml(2),1,32)
+    msg $chan $regml(2) You have 30 seconds to post a link in here
+  }
+  if ($regml(1) == reg del) && ($nick isop $chan) {
+    if ($istok($($+(%,permit.,$chan),2),$regml(2),32)) {
+      set $+(%,permit.,$chan) $remtok($($+(%,permit.,$chan),2),$regml(2),1,32)
+      msg $chan $regml(2) removed from regular list
+    }
+    else {
+      msg $chan $regml(2) is not on regular list
+    }
+  }
+}
