@@ -1,0 +1,56 @@
+alias -l addPoints {
+  if ($1 !isnum) { echo 2 -st $1 is not a number. It needs to be a number. | halt }
+  var %topic $+($chan,.,$nick)
+  var %points $calc($readini(Karma.ini,%topic,Points) + $1)
+  writeini -n Karma.ini %topic Points %points
+  return %points
+}
+
+alias -l lookUpPoints {
+  var %topic $+($chan,.,$nick)
+  var %points $readini(Karma.ini,%topic,Points)
+  return %points
+}
+alias doaddpoints {
+  if ($3 !isnum) { echo 2 -st $3 is not a number. It needs to be a number. | halt }
+  var %topic $+($1,.,$2)
+  var %points $calc($readini(Karma.ini,%topic,Points) + $3)
+  writeini -n Karma.ini %topic Points %points
+  echo -a Added Points for %topic
+}
+
+alias dorempoints {
+  var %topic $+($1,.,$2)
+  remini -n Karma.ini %topic Points
+  echo -a Removed Points for %topic
+}
+
+on *:text:!karma:#thebluemuzzy:{
+  if ((%floodkarma) || ($($+(%,floodkarma.,$nick),2))) { return }
+  set -u5 %floodkarma On
+  set -u15 %floodkarma. $+ $nick On
+  msg # $nick has $readini(Karma.ini,$+(#,.,$nick),Points) total karma.
+}
+
+on $*:text:/!karma (add|remove)/Si:#thebluemuzzy:{
+  if ( $nick == thebluemuzzy ) { 
+    if ($0 < 3) { msg # Insufficient parameters: Use !karma <add|remove> <user> [number] | return }
+    writeini -n Karma.ini $+(#,.,$3) Points $calc($readini(Karma.ini,$+(#,.,$3),Points) $iif($2 == add,+,-) $iif($4 isnum,$4,1))
+    { msg $chan $3 now has $readini(Karma.ini,$+(#,.,$3),Points) total karma. }
+  }
+  else { msg $chan This command is only available to TheBlueMuzzy. }
+}
+on !*:join:#thebluemuzzy:{
+  $+(.timerpoints.,#,.,$nick) 0 600 add.pts $+(#,.,$nick)
+  add.pts $+(#,.,$nick)
+}
+on !*:part:#thebluemuzzy:$+(.timerpoints.,#,.,$nick) off
+alias -l add.pts {
+  writeini -n Karma.ini $1 Points $calc($readini(Karma.ini,$1,Points) + 1)
+}
+
+on *:text:!karmacheck *:#:{
+  if ($nick isop #) { 
+    msg # $2 has $readini(Karma.ini,$+(#,.,$2),Points) total Karma. 
+  }
+}
