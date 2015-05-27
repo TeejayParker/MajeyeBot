@@ -1,0 +1,4 @@
+on *:text:!join:#majeyebot: {
+  msg # /me is joining $nick $+ 's chat. Don't forget to type /mod majeyebot in your own channel to ensure all commands work properly, if you do not mod the bot, it will leave your channel.
+  .join $chr(35) $+ $nick
+}
