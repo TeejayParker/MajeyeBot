@@ -1,0 +1,36 @@
+on *:text:!addcom *:#: {
+  if ($nick isop #) {
+    var %r = $read(# $+ commands.txt,ns,$2)
+    if (%r) { .msg $chan [ $+ $nick $+ ]: Error, This command $qt($2) is already exist into the database! | return }
+    write # $+ commands.txt $2-
+    msg $chan /me + Command $2 has been added to the database!
+  }
+}
+on *:text:!delcom *:#: {
+  if ($nick isop #) {
+    var %r = $read(# $+ commands.txt,ns,$2)
+    if (!%r) { .msg $chan [ $+ $nick $+ ]: Error, This command $qt($2) does NOT exist into the database! | return }
+    write -dl $+ $readn # $+ commands.txt
+    msg $chan /me - Command $2- has been deleted from the database!
+  }
+}
+on *:text:!editcom & *:#: {
+  if ($nick isop #) {
+    var %r = $read(# $+ commands.txt,ns,$2)
+    if (!%r) { .msg $chan [ $+ $nick $+ ]: Error, This command $qt($2) does NOT exist into the database! | return }
+    write -l $+ $readn # $+ commands.txt $2-
+    msg $chan /me -> Command $2 has been updated!
+  }
+}
+ON *:TEXT:*:#: {
+  var %owner $right(#,-1)
+  tokenize 32 $strip($1-,burci)
+  if ($read(# $+ commands.txt, nts, $1)) {
+    var %com = $v1
+    var %com = $replace(%com,@user@,$iif($2,$2,?),@nick@,$nick,@target@,$target)
+    if (-ul=mod == $gettok(%com,1,32)) && (!$mod($nick)) { msg $chan Sorry $nick $+ , you cannot use this command. | return }
+    if (-ul=reg == $gettok(%com,1,32)) && (!$mod($nick)) && (!$regular($nick)) { msg $chan Sorry $nick $+ , you cannot use this command. | return }
+    if (-ul=own == $gettok(%com,1,32)) && ($nick != %owner) { msg $chan Sorry $nick $+ , you cannot use this command. | return }
+    msg $chan $iif(-ul=mod == $gettok(%com,1,32) || -ul=reg == $gettok(%com,1,32) || -ul=own == $gettok(%com,1,32),$gettok(%com,2-,32),$gettok(%com,1-,32))
+  }
+}
