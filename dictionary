@@ -1,0 +1,45 @@
+alias noHTML return $regsubex($1, /<[^>]+(?:>|$)|^[^<>]+>/g, $null)
+
+on *:text:!dict*:#: {
+  if ((%flooddict) || ($($+(%,flooddict.,$nick),2))) { return }
+  set -u10 %flooddict. $+ $nick On 
+  if ($1 == !dict) {
+    set %channel #
+    $iif($2,dic $2-,msg # $upper($nick) Specify a word to look up)
+  } 
+}
+
+alias dic {
+  sockclose dic
+  set %dic.word $replace($1-,$chr(32),$chr(37) $+ 20)    
+  set %dic.counter 0
+  sockopen dic dictionary.reference.com 80
+}
+
+on *:SOCKOPEN:dic:{
+  if $sockerr { return }
+  sockwrite -n $sockname GET /browse/ $+ %dic.word $+ ?s=t HTTP/1.1
+  sockwrite -n $sockname Host: dictionary.reference.com
+  sockwrite -n $sockname $crlf
+}
+
+on *:SOCKREAD:dic:{ 
+  :nextread
+  if $sockerr { return }
+  var %data  
+  sockread %data  
+  if ($regex(%data,<span class="dbox-pg">(.*?)</span>)) { set %dic.class $regml(1) }
+  if ($regex(%data,<span class="def-number">1.</span>)) { set %dic.target 1 }
+  if (%dic.target == 1) { inc %dic.counter }
+  if (%dic.counter >= 3 ) { 
+    if (!$noHTML(%data)) goto nextread
+    msg %channel $+($upper($left(%dic.class,1)),$mid(%dic.class,2)) - $+($upper($left($noHTML(%data),1)),$mid($noHTML(%data),2)) 
+    unset %dic.*
+    sockclose dic
+  }
+  elseif (<div class="cl-left">Copyright isin %data) || (HTTP/1.1 301 Moved Permanently isin %data) { 
+    msg %channel Word not found
+    unset %dic.*
+    sockclose dic 
+  }
+}
