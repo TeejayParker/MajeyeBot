@@ -1,0 +1,18 @@
+on *:TEXT:!raffle:#:{
+  if ($nick == $mid(#,2)) {
+    set %raffle $rand(1,100)
+    msg $chan /me First person to guess the number between 1 and 100 wins!
+  }
+  else { msg $chan $upper($nick), this command is only available to the streamer. }
+}
+
+
+on *:text:*:#: {
+  if ($1- == %raffle) {
+    msg $chan WE HAVE A WINNER  
+    msg $chan /me The Winner is $nick with the number %raffle $+ !!!!!!
+    unset %raffle
+    .timerraffle 1 2 msg $chan CONGRATULATIONS $nick !
+  }
+  else { }
+}
