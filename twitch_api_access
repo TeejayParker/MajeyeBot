@@ -1,0 +1,433 @@
+on ^*:logon:*:{
+  if ($network == twitch) && ($twitch(# [ $+ [ $mnick ] ]).token) {
+    .raw PASS oauth: $+ $v1
+    .raw NICK $mnick
+    haltdef
+  }
+}
+
+on @*:text:!commercial*:#:{
+  if ($nick isop #) twitch.commercial # $iif($2 isnum,$2)
+}
+
+on @*:text:/^!(topic|game)/iS:#:{
+  var %switch $iif($1 == !topic,status,game)
+  if ($2 != $null) {
+    if ($nick isop #) twitch.topic # %switch $2-
+  }
+}
+
+alias twitch.follow {
+  var %user = $1, %user.chan = #$1, %target = $2, %chan = $3
+  inc -e %nonce
+  var %sockname = twitch.follow. $+ %nonce
+
+  hfree -w %sockname | .hmake %sockname
+  hadd %sockname oath.token $twitch(%user.chan).token
+  hadd %sockname request /kraken/users/ $+ %user $+ /follows/channels/ $+ %target
+  hadd %sockname method PUT
+  hadd %sockname data
+  hadd %sockname chan %chan
+  hadd %sockname target %target
+  hadd %sockname signal twitch.follow
+  sockopen -e %sockname api.twitch.tv 443
+}
+
+on *:signal:twitch.follow:{
+  var %err = $1, %sockname = $2, %header = $3, %data = $4
+  var %chan = $hget(%sockname,chan)
+
+  if (* 200 OK iswm $read(%header,n,1)) $iif(%chan,msg %chan,echo -ag) Successfully followed $json(%data,channel,display_name)
+  else $iif(%chan,msg %chan,echo -ag) Could not follow $hget(%sockname,target)
+
+  hfree -w %sockname
+  if ($isfile(%header)) .remove %header
+  if ($isfile(%data)) .remove %data
+}
+
+alias followers.update {
+  if (-* iswm $1) {
+    var %switches = $1
+    tokenize 32 $2-
+  }
+  var %chan = #$$1, %limit = $iif($2,$2,25), %offset = $iif($3,$3,0)
+  var %sockname = twitch.followers. $+ $ticks
+  hfree -w %sockname | .hmake %sockname
+  hadd %sockname chan %chan
+  hadd %sockname limit %limit
+  hadd %sockname offset %offset
+  hadd %sockname request /kraken/channels/ $+ $mid(%chan,2-) $+ /follows?limit= $+ %limit $+ &offset= $+ %offset
+  hadd %sockname method GET
+  hadd %sockname signal followers.update
+  if (s isin %switches) hadd %sockname show 1
+  if (!$hget(followers. $+ %chan)) hadd %sockname init 1
+  sockopen -e %sockname api.twitch.tv 443
+  return %sockname
+}
+
+on *:signal:followers.update:{
+  var %err = $1, %sockname = $2, %header = $3, %data = $4
+  var %chan = $hget(%sockname,chan), %init = $hget(%sockname,init), %show = $hget(%sockname,show)
+
+  if (* 200 OK iswm $read(%header,n,1)) {
+    if (!$hget(followers. $+ %chan)) {
+      .hmake -s followers. $+ %chan $iif($calc($json(%data,_total) / 10) > 100,$v1,$v2)
+      if ($ini(followers.ini,%chan,0) > 0) hload -i followers. $+ %chan followers.ini %chan
+    }
+
+    var %i = 0, %n = $json(%data,follows).count, %new.count
+    while (%i < %n) {
+      var %name = $json(%data,follows,%i,user,name)
+      var %display_name = $json(%data,follows,%i,user,display_name)
+      if (!$hget(followers. $+ %chan,%name)) {
+        hadd followers. $+ %chan %name 1
+        if (!%init) && (%show) {
+          set -nz %followers. $+ %chan %followers. [ $+ [ %chan ] ] %display_name
+          if ($calc($len(%followers. [ $+ [ %chan ] ]) + $len(%display_name)) > 350) {
+            var %msg = Welcome to our new follower $+ $iif($numtok(%followers. [ $+ [ %chan ] ],32) > 1,s:,:) $regsubex(%followers. [ $+ [ %chan ] ],/( $+ $chr(32) $+ )/g,$iif(\n == \0,$iif(\0 > 2,$chr(44),$chr(32)) and $chr(32),$chr(44) $+ $chr(32))) $+ !
+            .timer 1 $iif(%flood.protection,$v1,0) msg %chan $safe(%msg)
+            inc -z %flood.protection 5
+            unset %followers. [ $+ [ %chan ] ]
+          }
+        }
+        inc %new.count
+      }
+      else break
+      inc %i
+    }
+
+    if (%new.count == $hget(%sockname,limit)) {
+      followers.update %chan 100 $calc($hget(%sockname,limit) + $hget(%sockname,offset))
+      var %next = $result
+      if (%init) hadd %next init 1
+      if (%show) hadd %next show 1
+    }
+    else {
+      if (!%init) && (%show) && (%new.count) {
+        var %msg = Welcome to our new follower $+ $iif($numtok(%followers. [ $+ [ %chan ] ],32) > 1,s:,:) $regsubex(%followers. [ $+ [ %chan ] ],/( $+ $chr(32) $+ )/g,$iif(\n == \0,$iif(\0 > 2,$chr(44),$chr(32)) and $chr(32),$chr(44) $+ $chr(32))) $+ !
+        .timer 1 $iif(%flood.protection,$v1,0) msg %chan $safe(%msg)
+        inc -z %flood.protection 5
+      }  
+      unset %followers. [ $+ [ %chan ] ]
+      if ($hget(followers. $+ %chan)) hsave -i followers. $+ %chan followers.ini %chan
+    }
+  }
+
+  hfree -w %sockname
+  if ($isfile(%header)) .remove %header
+  if ($isfile(%data)) .remove %data
+}
+
+alias twitch.commercial {
+  var %chan = #$$1, %length = $2
+  var %sockname = twitch.topic. $+ $ticks
+  hfree -w %sockname | .hmake %sockname
+  hadd %sockname oath.token $twitch(%chan).token
+  hadd %sockname method POST
+  hadd %sockname request /kraken/channels/ $+ $mid(%chan,2-) $+ /commercial
+  hadd %sockname signal twitch.commercial
+  if (%length) hadd %sockname data length= $+ %length
+  sockopen -e %sockname api.twitch.tv 443
+  set -z % [ $+ [ # $+ .commercial ] ] 480
+  set % [ $+ [ # $+ .titlebar ] ] $window(%chan).title
+  .timer. $+ # $+ .commercial 480 1 titlebar.update.commercial @ [ $+ [ $window(%chan).wid ] ]
+}
+
+on *:signal:twitch.commercial:{
+  var %err = $1, %sockname = $2, %header = $3, %data = $4
+  var %chan = $hget(%sockname,chan)
+
+  if (* 2* !iswm $read(%header,n,1)) {
+    twitch.debug Error: $iif($v2,$v1,could not read header)
+    var %error = $json(%data,error)
+    var %message = $json(%data,message)
+    if (%error != $null) && (%message != $null) { twitch.debug Error: %error $+ , %message }
+  }
+
+  hfree -w %sockname
+  if ($isfile(%header)) .remove %header
+  if ($isfile(%data)) .remove %data
+}
+
+alias titlebar.update.commercial {
+  if (% [ $+ [ # $+ .commercial ] ] > 0) { titlebar $$1 - Commercial available in $duration($v1) }
+  else { titlebar $$1 % [ $+ [ # $+ .titlebar ] ] | unset % [ $+ [ # $+ .titlebar ] ] | .timer [ $+ [ $ctimer ] ] off }
+}
+
+alias twitch.topic {
+  var %chan = $1, %switch = $2, %topic = 3-
+  var %sockname = twitch.topic. $+ $ticks
+  hfree -w %sockname | .hmake %sockname
+  hadd %sockname chan %chan %switch
+  hadd %sockname oath.token $twitch(%chan).token
+  hadd %sockname request /kraken/channels/ $+ $mid(%chan,2-)
+  if (%topic != $null) {
+    hadd %sockname method PUT
+    hadd %sockname data channel[ $+ $switch $+ ]= $+ $urlencode(%topic)
+    hadd %sockname signal topic.set
+  }
+  else {
+    hadd %sockname method GET
+    hadd %sockname signal topic.get
+  }
+  sockopen -e %sockname api.twitch.tv 443
+}
+
+on *:signal:topic.get:{
+  var %err = $1, %sockname = $2, %header = $3, %data = $4, %chan = $5, %switch = $6
+  var %chan = $hget(%sockname,chan)
+
+  if (* 200 OK iswm $read(%header,n,1)) msg %chan %switch $+ : $json(%data,%switch)
+  else msg %chan Could not get %switch $+ !
+
+  hfree -w %sockname
+  if ($isfile(%header)) .remove %header
+  if ($isfile(%data)) .remove %data
+}
+
+on *:signal:topic.set:{
+  var %err = $1, %sockname = $2, %header = $3, %data = $4
+  var %chan = $hget(%sockname,chan)
+
+  if (* 200 OK iswm $read(%header,n,1)) msg %chan Status set: $json(%data,status)
+  else msg %chan Could not set status.
+
+  hfree -w %sockname
+  .remove %header | .remove %data
+}
+
+alias twitch.auth.request {
+  var %chan = #$$1, %user = $mid(%chan,2-)
+  var %client_id = $twitch(%chan).client_id
+  var %secret = $twitch(%chan).secret
+  var %redirect_uri = $twitch(%chan).redirect_uri
+  var %scope = $twitch(%chan).scope_request
+
+  if (!$sock(twitch.auth.request)) socklisten -d 127.0.0.1 twitch.auth.request 80
+  if (%secret) url $+(https://api.twitch.tv/kraken/oauth2/authorize?response_type=code&client_id=,%client_id,&redirect_uri=,%redirect_uri,&scope=,%scope,&state=,%user)
+  else url $+(https://api.twitch.tv/kraken/oauth2/authorize?response_type=token&client_id=,%client_id,&redirect_uri=,%redirect_uri,&scope=,%scope,&state=,%user)
+}
+
+on *:socklisten:twitch.auth.request:{
+  var %sockname = twitch.auth.request. $+ $ticks
+  if ($sock(%sockname)) return
+
+  hfree -w %sockname | .hmake %sockname
+  hadd %sockname header.signal twitch.auth.request
+
+  sockaccept %sockname
+}
+
+on *:signal:twitch.auth.request:{
+  var %err = $1, %sockname = $2, %header = $3
+  var %request = $read(%header,n,1)
+
+  if ($regex(%request,^GET / HTTP)) {
+    var %document = <!doctype html><html><head><script>var x = null; x = new XMLHttpRequest(); x.open("GET", "/?" + document.location.hash.substring(1), false); x.send(null); document.write(x.responseText);</script></head></html>
+    socket.respond %sockname %document
+  }
+  elseif ($regex(%request,^GET /\?access_token=(\w+).*&scope=([\w+]+).*&state=(\w+))) {
+    var %access_token = $regml(1), %scope = $regml(2), %chan = # [ $+ [ $regml(3) ] ]
+
+    socket.respond %sockname Successfully received token, return to mIRC.
+    sockclose twitch.auth.request
+
+    writeini twitch.ini %chan token %access_token
+
+    remini twitch.ini %chan $+ .scope
+    var %i = 1, %n = $numtok(%scope,43)
+    while (%i <= %n) {
+      writeini twitch.ini %chan $+ .scope $gettok(%scope,%i,43) 1
+      inc %i
+    }
+  }
+  elseif ($regex(%request,^GET /\?code=(\w+).*&state=(\w+))) {
+    var %code = $regml(1), %chan = # [ $+ [ $regml(2) ] ]
+
+    twitch.token.request %chan %code %sockname
+    sockclose twitch.auth.request
+  }
+  elseif ($regex(%request,^GET /favicon.ico HTTP)) {
+    sockwrite -n %sockname HTTP/1.1 404 Not Found
+    sockwrite -n %sockname Connection: close
+    sockwrite -n %sockname $crlf
+  }
+  else socket.respond %sockname Could not retrieve token.
+
+  if ($isfile(%header)) .remove %header
+}
+
+alias twitch.token.request {
+  var %chan = #$$1, %code = $$2, %response.sockname = $$3
+  var %client_id = $twitch(%chan).client_id
+  var %client_secret = $twitch(%chan).secret
+  var %redirect_uri = $twitch(%chan).redirect_uri
+  var %data = $+(client_id=,%client_id,&client_secret=,%client_secret,&grant_type=authorization_code,&redirect_uri=,%redirect_uri,&code=,%code)
+
+  var %sockname = twitch.token.request. $+ $ticks
+  hfree -w %sockname | .hmake %sockname
+  hadd %sockname method POST
+  hadd %sockname request /kraken/oauth2/token
+  hadd %sockname data %data
+  hadd %sockname signal twitch.token.request
+  hadd %sockname chan %chan
+  hadd %sockname twitch.code.respond %response.sockname
+  sockopen -e %sockname api.twitch.tv 443
+}
+
+on *:signal:twitch.token.request:{
+  var %err = $1, %sockname = $2, %header = $3, %data = $4
+  var %chan = $hget(%sockname,chan)
+
+  if (* 200 OK iswm $read(%header,n,1)) {
+    writeini twitch.ini %chan token $json(%data,access_token)
+
+    remini twitch.ini %chan $+ .scope
+    var %i = 0, %n = $json(%data,scope).count
+    while (%i < %n) {
+      writeini twitch.ini %chan $+ .scope $json(%data,scope,%i) 1
+      inc %i
+    }
+
+    socket.respond $hget(%sockname,twitch.code.respond) Successfully received token, return to mIRC.
+  }
+  else {
+    socket.respond $hget(%sockname,twitch.code.respond) Could not retrieve token.
+  }
+
+  sockclose -w twitch.auth.request
+  hfree -w %sockname
+  if ($isfile(%header)) .remove %header
+  if ($isfile(%data)) .remove %data
+}
+
+on *:sockopen:twitch.*:{
+  var %a = sockwrite -n $sockname
+
+  %a $hget($sockname,method) $hget($sockname,request) HTTP/1.1
+  %a Host: api.twitch.tv
+  %a Connection: close
+  %a Accept: application/vnd.twitchtv.v2+json
+  if ($hget($sockname,oath.token) != $null) %a Authorization: OAuth $v1
+  if ($hfind($sockname,data).item) {
+    %a Content-Type: application/x-www-form-urlencoded
+    %a Content-Length: $len($hget($sockname,data))
+  }
+  %a $+($crlf,$hget($sockname,data))
+}
+
+on *:sockread:twitch.*:{
+  var %headerfile = $sockname $+ .header.txt
+  var %datafile = $sockname $+ .data.txt
+
+  if (!$sock($sockname).mark) {
+    var %header | sockread %header
+    while (%header != $null) {
+      write %headerfile %header
+      if (%header == Transfer-Encoding: chunked) {
+        hadd $sockname chunk-size 0
+      }
+      sockread %header
+    }
+    if ($sockbr) {
+      if ($hget($sockname,header.signal)) .signal $v1 0 $sockname %headerfile
+      sockmark $sockname $true
+    }
+  }
+  if ($sock($sockname).mark) {
+    var %chunk
+    if ($hget($sockname,chunk-size) == 0) {
+      sockread %chunk
+      if ($base(%chunk,16,10) !isnum) sockread %chunk
+      hadd $sockname chunk-size $base(%chunk,16,10)
+      if ($hget($sockname,chunk-size) == 0) {
+        sockread %chunk
+        return
+      }
+    }
+    sockread $hget($sockname,chunk-size) &read
+    while ($sockbr) {
+      if ($hget($sockname,chunk-size) != 0) bwrite %datafile -1 -1 &read
+      if ($hget($sockname,chunk-size)) hdec $sockname chunk-size $sockbr
+      if ($hget($sockname,chunk-size) == 0) {
+        sockread %chunk
+        if ($base(%chunk,16,10) isnum) %chunk = $v1
+        else {
+          sockread %chunk
+          if ($base(%chunk,16,10) isnum) %chunk = $v1
+        }
+        if (%chunk isnum) {
+          hadd $sockname chunk-size %chunk
+          if (%chunk == 0) sockread %chunk
+        }
+      }
+      sockread $hget($sockname,chunk-size) &read
+    }
+  }
+}
+
+on *:sockclose:twitch.*:{
+  var %header = $sockname $+ .header.txt
+  var %data = $sockname $+ .data.txt
+  var %signal = $hget($sockname,signal)
+
+  if (%signal) .signal %signal 0 $sockname %header %data
+  else {
+    hfree -w $sockname
+    if ($isfile(%header)) .remove %header
+    if ($isfile(%data)) .remove %data
+  }
+}
+
+alias -l twitch {
+  if ($1) && ($readini(twitch.ini,n,$1,$prop)) { return $v1 } 
+  else return $readini(twitch.ini,n,global,$prop)
+}
+
+alias twitch.setup {
+  var %chan = $iif($1,$1,# [ $+ [ $mnick ] ])
+  var %scopes = chat_login+channel_read+channel_editor+channel_commercial+channel_subscriptions+channel_check_subscription+user_follows_edit
+
+  writeini twitch.ini global redirect_uri http://localhost/
+  writeini twitch.ini global scope_request %scopes
+  if (!$twitch(%chan).client_id) writeini twitch.ini %chan client_id PASTE_ID_HERE
+
+  flushini twitch.ini
+  run twitch.ini
+}
+
+menu channel {
+  $iif(!$isfile(twitch.ini),Twitch Setup) : twitch.setup #
+  $iif($twitch(#).client_id && !$twitch(#).token,Request Token) : twitch.auth.request #
+
+  $iif($twitch(#).token, Commercial)
+  .$iif(% [ $+ [ # $+ .commercial ] ],$style(2)) 30 seconds:twitch.commercial # 30
+  .$iif(% [ $+ [ # $+ .commercial ] ],$style(2)) 60 seconds:twitch.commercial # 60
+  .$iif(% [ $+ [ # $+ .commercial ] ],$style(2)) 90 seconds:twitch.commercial # 90
+
+  $iif($twitch(#).token, Followers)
+  .Welcome now:followers.update -s #
+  .$iif($timer(.followers. $+ #).delay == 300000,$style(1)) 5 minute interval:if ($timer(.followers. $+ #).delay == 300000) .timer.followers. $+ # off | else .timer.followers. $+ # 0 300 followers.update -s #
+  .$iif($timer(.followers. $+ #).delay == 600000,$style(1)) 10 minute interval:if ($timer(.followers. $+ #).delay == 600000) .timer.followers. $+ # off | else .timer.followers. $+ # 0 600 followers.update -s #
+  .$iif($timer(.followers. $+ #).delay == 1800000,$style(1)) 30 minute interval:if ($timer(.followers. $+ #).delay == 1800000) .timer.followers. $+ # off | else .timer.followers. $+ # 0 1800 followers.update -s #
+
+  $iif($twitch(#).token,Topic) : twitch.topic # $$?="Enter topic:"
+
+  $iif($twitch(#).token,Renew Token) : twitch.auth.request #
+}
+
+alias -l twitch.debug {
+  if (!$window(@Twitch.tv)) window -e2hk0xz @Twitch.tv
+  echo -i2t @Twitch.tv $1-
+}
+
+alias -l socket.respond {
+  var %sockname = $$1, %data = $2-
+  sockwrite -n %sockname HTTP/1.1 200 OK
+  sockwrite -n %sockname Connection: close
+  sockwrite -n %sockname Content-Length: $len(%data)
+  sockwrite -n %sockname $+($crlf,%data)
+}
+
+alias safe return $!decode( $encode($1,m) ,m)
+alias -l urlencode return $regsubex($1-,/([^A-Z0-9])/gi,$+(%,$base($asc(\1),10,16)))
