@@ -1,0 +1,12 @@
+on *:text:!mods:#: {
+  if ($nick !isop #) return
+  if (!%twitchmodlst.delay) {
+    var %t = 1
+    while (%t <= $nick(#,0,o)) {
+      var %tmod = $iif(%tmod,%tmod $nick(#,%t,o),$nick(#,%t,o))
+      inc %t
+    }
+    set -eu60 %twitchmodlst.delay 1
+    msg # Mods Online: $iif(%tmod,%tmod,None)
+  }
+}
