@@ -1,0 +1,52 @@
+on *:TEXT:!rps *:#: {
+  if ($2 == scissors) {
+    var %scissors = $rand(1,5)
+    if (%scissors == 1) { msg # ROCK -- Rock beats Scissors! You Lose $upper($nick) ! 
+    msg # .timeout $nick 3 }
+    if (%scissors == 2) { msg # PAPER -- Hmm, I loose. Congrats $upper($nick) }
+    if (%scissors == 3) { msg # SCISSORS -- Dang it, it's a draw. }
+    if (%scissors == 4) { msg # LIZARD -- I have been decapitated by your superiority at this game, $upper($nick)! }
+    if (%scissors == 5) { msg # SPOCK -- You have been smashed, $upper($nick) , perhaps better luck next time.
+    msg # .timeout $nick 3 }
+  }
+  if ($2 == paper) {
+    var %paper = $rand(1,5)
+    if (%paper == 1) { msg # SCISSORS -- Scissors beats Paper! You Lose $upper($nick)! 
+    msg # .timeout $nick 3 }
+    if (%paper == 2) { msg # ROCK -- Hmm, I loose. Congrats $upper($nick) }
+    if (%paper == 3) { msg # PAPER -- Dang it, it's a draw. }
+    if (%paper == 4) { msg # LIZARD -- The lizard eats your paper.  You lose $upper($nick)!
+    msg # .timeout $nick 3 }
+    if (%paper == 5) { msg # SPOCK -- You have disproven me, great job, $upper($nick)! }
+  }
+  if ($2 == rock) {
+    var %rock = $rand(1,5)
+    if (%rock == 1) { msg # PAPER -- Paper beats Rock! You Lose $upper($nick)! 
+    msg # .timeout $nick 3 }
+    if (%rock == 2) { msg # SCISSORS -- Hmm, I lose. Congrats $upper($nick) }
+    if (%rock == 3) { msg # ROCK -- Dang it, it's a draw. }
+    if (%rock == 4) { msg # LIZARD -- You crushed the lizard, great job, $upper($nick)! }
+    if (%rock == 5) { msg # SPOCK -- You have been vaporized.  You lose $upper($nick)!
+    msg # .timeout $nick 3 }
+  }
+  if ($2 == lizard) {
+    var %lizard = $rand(1,5)
+    if (%lizard == 1) { msg # PAPER -- Lizard eats paper! You Win $upper($nick)! }
+    if (%lizard == 2) { msg # SCISSORS -- Scissors decapitates Lizard.  You lose $upper($nick)! 
+    msg # .timeout $nick 3 }
+    if (%lizard == 3) { msg # ROCK -- Rock crushes Lizard.  You lose $upper($nick)! 
+    msg # .timeout $nick 3 }
+    if (%lizard == 4) { msg # LIZARD -- It's a draw, better luck next time, $upper($nick) }
+    if (%lizard == 5) { msg # SPOCK -- Lizard poisons Spock!  You win $upper($nick)! }
+  }
+  if ($2 == spock) {
+    var %spock = $rand(1,5)
+    if (%spock == 1) { msg # PAPER -- Paper disproves Spock, you lose $upper($nick)! 
+    msg # .timeout $nick 3 }
+    if (%spock == 2) { msg # SCISSORS -- Spock smashes Scissors.  You win $upper($nick)! }
+    if (%spock == 3) { msg # ROCK -- Spock vaporizes Rock.  You win $upper($nick)! }
+    if (%spock == 4) { msg # LIZARD -- Lizard poisons Spock, you lose $upper($nick)!
+    msg # .timeout $nick 3 }
+    if (%spock == 5) { msg # SPOCK -- Draw time.  Better luck next time, $upper($nick)! }
+  }
+}
