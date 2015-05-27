@@ -1,0 +1,5 @@
+ON *:TEXT:!fact:#: { 
+  if ((%floodfact) || ($($+(%,floodfact.,$nick),2))) { return }
+  set -u15 %floodfact. $+ $nick On
+  msg $chan RANDOM FACT: $read(randomfact.txt,n)
+}
