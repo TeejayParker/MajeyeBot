@@ -1,0 +1,5 @@
+ON *:TEXT:!spinslots:#: { 
+  if ((%floodspinslots) || ($($+(%,floodspinslots.,$nick),2))) { return }
+  set -u15 %floodspinslots. $+ $nick On
+  msg $chan SLOTS ROLL: $read(slotmachine.txt,n)
+}
