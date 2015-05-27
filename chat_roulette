@@ -1,0 +1,35 @@
+On *:TEXT:!Roulette:#: {
+  if ((%floodroulette) || ($($+(%,floodroulette.,$nick),2))) { return }
+  set -u15 %floodroulette On
+  set -u30 %floodroulette. $+ $nick On
+  if ($nick isop #) {
+    var %randmods = $rand(1,7)
+    if (%randmods == 1) { msg $chan The gun clicks!...Empty...You live to see another day $upper($nick) }
+    if (%randmods == 2) { msg $chan BANG! ... You were shot, but live! There must be secret powers in your mod armor $upper($nick) }
+    if (%randmods == 3) { msg $chan BANG! ... The bullet missed, you only have your born moderation powers to thank $upper($nick) }
+    if (%randmods == 4) { msg $chan $upper($nick) starts to shake, tries to pull the trigger but can't and then drops the gun, they aren't up to the challenge of Roulette. }
+    if (%randmods == 5) { msg $chan $upper($nick) couldn't figure out how to work the safety, puts the gun down & steps away slowly. }
+    if (%randmods == 6) { msg $chan $upper($nick) puts the gun to their head and pulls the trigger.  CLICK.  $upper($nick) looks down the barrel & finds the gun was unloaded but still managed to pee their pants. }
+    if (%randmods == 7) { msg $chan $upper($nick) pulls the trigger and gets a face full of confetti. It was actually a party popper shaped like a gun. }
+  }
+  else {
+    var %randnumber = $rand(1,16)
+    if (%randnumber == 1) { msg $chan BANG!... Roulette claims another soul. R.I.P $upper($nick) }
+    if (%randnumber == 2) { msg $chan The gun clicks!...Empty...You live to see another day $upper($nick) }
+    if (%randnumber == 3) { msg $chan BANG!... $upper($nick) Was a great viewer, and now $upper($nick) is a dead viewer. R.I.P }
+    if (%randnumber == 4) { msg $chan $upper($nick) starts to shake, $upper($nick) tries to pull the trigger but can't. $upper($nick) drops the gun, $upper($nick) isn't up to the challenge of Roulette. }
+    if (%randnumber == 5) { msg $chan $upper($nick) picks up the pistol but decides to run in circles shooting bunny rabbits instead. }
+    if (%randnumber == 6) { msg $chan $upper($nick) starts to cry & just can't pull the trigger and hands the gun to MajeyeBot to request the bot shoots them instead. }
+    if (%randnumber == 7) { msg $chan $upper($nick) pulls the trigger and gets a face full of confetti. It was actually a party popper shaped like a gun. }
+    if (%randnumber == 8) { msg $chan $upper($nick) starts to stumble backwards uncontrollably until they plummet 956 feet into the Arkansas River.  I guess the gun was just too heavy.
+    msg $chan /me asks 'Do you even lift, $upper($nick)?' }
+    if (%randnumber == 9) { msg $chan $upper($nick) was infested by the offspring of parasitic alien lifeforms.  Months later, they burst out of $upper($nick)'s chest and devours the host alive. }
+    if (%randnumber == 10) { msg $chan $upper($nick) pulls the trigger... CLICK!  The gun was empty, but $upper($nick) was so scared they tripped and fell on a knife 341 times. }
+    if (%randnumber == 11) { msg $chan $upper($nick) succumbed to a drug induced sleep and forgot to close the terrarium that engaged 3 rattlesnakes, a boa constrictor, and 2 water moccasins.  Kappa }
+    if (%randnumber == 12) { msg $chan $upper($nick) contracted cancer from the massive amounts of ragers & trolls on the internet and now has 24 hours to live. }
+    if (%randnumber == 13) { msg $chan $upper($nick) survived roulette, but then got hit by a bus trying to cross the street to get ice cream. }
+    if (%randnumber == 14) { msg $chan $upper($nick) got hit by the bullet from the gun, followed by an airliner crashing down, followed by a leaky gas-line explosion, and the remains were eaten by cannibals.  Today was not your lucky day, $upper($nick). }
+    if (%randnumber == 15) { msg $chan The bullet missed you today, $upper($nick), you felt so lucky you bought a lottery ticket and won 1,000,000 dollars! }
+    if (%randnumber == 16) { msg $chan A close friend of $upper($nick) walked in the room just as they were about to pull the trigger.  You live! }    
+  }
+}
