@@ -1,0 +1,8 @@
+on *:text:!dice*:#:{
+  if ((%flooddice) || ($($+(%,flooddice.,$nick),2))) { return }
+  set -u30 %flooddice. $+ $nick On
+  var %h = $right($1,-5)
+  if %h < 0 { msg $chan $upper($nick) %h is not a valid entry. }
+  if %h isletter { msg $chan $upper($nick) %h is not a valid entry. }
+  else { msg $chan $upper($nick) rolled a ( $r(1,%h) ). }
+}
