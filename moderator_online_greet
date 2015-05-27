@@ -1,0 +1,6 @@
+on *:join:#:{
+  if ($nick isop #) {
+    msg # MODERATOR $upper($nick) has just come online!
+  }
+  else return
+}
