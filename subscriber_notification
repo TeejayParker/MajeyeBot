@@ -1,0 +1,3 @@
+ON *:TEXT:*subscribed*:#:{
+  if ($nick == twitchnotify) { msg # /me $1 has subscribed, thank you for supporting the stream and enjoy the new emotes! }
+}
