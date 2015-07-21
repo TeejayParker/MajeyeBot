@@ -1,0 +1,4 @@
+on $*:text:/!caster /Si:#:{
+  var %caster = $eval($+(www.twitch.tv/,$2))
+  msg $chan GO FOLLOW THIS STREAMER %caster $+ 
+}
