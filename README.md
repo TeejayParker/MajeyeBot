@@ -1,4 +1,4 @@
-# MajeyeBot 1.0
+# MajeyeBot 1.0 [DEPRECATED]
 All of MajeyeBot code is opensource.
 Feel free to use any of this code for your Twitch bot.
 No permission needed.
